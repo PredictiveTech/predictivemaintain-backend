@@ -15,7 +15,7 @@ import pe.edu.upc.predictivemaintain.subscription.interfaces.rest.transform.Subs
 import java.util.List;
 
 @RestController
-@RequestMapping(value = "/api/plans", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = "/api/v1/plans", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Subscription plans", description = "Public catalog of subscription plans")
 public class SubscriptionPlansController {
 
