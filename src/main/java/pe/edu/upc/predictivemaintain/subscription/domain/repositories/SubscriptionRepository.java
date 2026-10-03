@@ -11,4 +11,10 @@ public interface SubscriptionRepository {
 
     /** Most recent subscription of the company. */
     Optional<Subscription> findCurrentByTenantId(UUID tenantId);
+
+    /**
+     * Same as {@link #findCurrentByTenantId} but locks the row until the transaction ends,
+     * so two reservations for the same company are processed one at a time.
+     */
+    Optional<Subscription> findCurrentForUpdate(UUID tenantId);
 }
