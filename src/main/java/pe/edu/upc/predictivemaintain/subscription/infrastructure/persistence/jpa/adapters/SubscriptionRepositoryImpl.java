@@ -38,4 +38,11 @@ public class SubscriptionRepositoryImpl implements SubscriptionRepository {
         return jpaRepository.findFirstByTenantIdOrderByStartsAtDesc(tenantId)
                 .map(SubscriptionPersistenceAssembler::toDomain);
     }
+
+    @Override
+    public Optional<Subscription> findCurrentForUpdate(UUID tenantId) {
+        return jpaRepository.findAllByTenantIdForUpdate(tenantId).stream()
+                .findFirst()
+                .map(SubscriptionPersistenceAssembler::toDomain);
+    }
 }
