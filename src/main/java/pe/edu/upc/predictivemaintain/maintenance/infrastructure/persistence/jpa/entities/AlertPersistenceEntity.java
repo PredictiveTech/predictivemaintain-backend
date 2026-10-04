@@ -13,6 +13,7 @@ import pe.edu.upc.predictivemaintain.maintenance.domain.model.valueobjects.Alert
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.valueobjects.AlertStatus;
 import pe.edu.upc.predictivemaintain.shared.infrastructure.persistence.jpa.entities.AuditableAbstractPersistenceEntity;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -52,6 +53,24 @@ public class AlertPersistenceEntity extends AuditableAbstractPersistenceEntity {
 
     @Column(name = "discard_reason", length = 500)
     private String discardReason;
+
+    @Column(name = "diag_metric", length = 40)
+    private String diagnosticMetric;
+
+    @Column(name = "diag_unit", length = 20)
+    private String diagnosticUnit;
+
+    @Column(name = "diag_observed_value", precision = 18, scale = 6)
+    private BigDecimal diagnosticObservedValue;
+
+    @Column(name = "diag_lower_bound", precision = 18, scale = 6)
+    private BigDecimal diagnosticLowerBound;
+
+    @Column(name = "diag_upper_bound", precision = 18, scale = 6)
+    private BigDecimal diagnosticUpperBound;
+
+    @Column(name = "diag_measured_at")
+    private Instant diagnosticMeasuredAt;
 
     /** Managed by JPA: it increases by one on every change and detects two people editing at once. */
     @Version
@@ -122,6 +141,54 @@ public class AlertPersistenceEntity extends AuditableAbstractPersistenceEntity {
 
     public void setDiscardReason(String discardReason) {
         this.discardReason = discardReason;
+    }
+
+    public String getDiagnosticMetric() {
+        return diagnosticMetric;
+    }
+
+    public void setDiagnosticMetric(String diagnosticMetric) {
+        this.diagnosticMetric = diagnosticMetric;
+    }
+
+    public String getDiagnosticUnit() {
+        return diagnosticUnit;
+    }
+
+    public void setDiagnosticUnit(String diagnosticUnit) {
+        this.diagnosticUnit = diagnosticUnit;
+    }
+
+    public BigDecimal getDiagnosticObservedValue() {
+        return diagnosticObservedValue;
+    }
+
+    public void setDiagnosticObservedValue(BigDecimal diagnosticObservedValue) {
+        this.diagnosticObservedValue = diagnosticObservedValue;
+    }
+
+    public BigDecimal getDiagnosticLowerBound() {
+        return diagnosticLowerBound;
+    }
+
+    public void setDiagnosticLowerBound(BigDecimal diagnosticLowerBound) {
+        this.diagnosticLowerBound = diagnosticLowerBound;
+    }
+
+    public BigDecimal getDiagnosticUpperBound() {
+        return diagnosticUpperBound;
+    }
+
+    public void setDiagnosticUpperBound(BigDecimal diagnosticUpperBound) {
+        this.diagnosticUpperBound = diagnosticUpperBound;
+    }
+
+    public Instant getDiagnosticMeasuredAt() {
+        return diagnosticMeasuredAt;
+    }
+
+    public void setDiagnosticMeasuredAt(Instant diagnosticMeasuredAt) {
+        this.diagnosticMeasuredAt = diagnosticMeasuredAt;
     }
 
     public Long getVersion() {

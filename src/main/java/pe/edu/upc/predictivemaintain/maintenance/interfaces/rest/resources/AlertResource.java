@@ -7,8 +7,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * @param version send it back as expectedVersion to detect that someone else changed the alert meanwhile
+ * @param version    send it back as expectedVersion to detect that someone else changed the alert meanwhile
+ * @param diagnostic the data that originated the alert; null for alerts that did not come from a reading
  */
 public record AlertResource(UUID id, UUID assetId, AlertSeverity severity, AlertStatus status,
-                            Instant raisedAt, String discardReason, long version) {
+                            Instant raisedAt, String discardReason, long version,
+                            AlertDiagnosticResource diagnostic) {
 }

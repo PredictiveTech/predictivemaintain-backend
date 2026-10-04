@@ -45,7 +45,7 @@ public class AlertCommandServiceImpl implements AlertCommandService {
             throw new ApplicationException(MaintenanceError.ASSET_INACTIVE);
         }
         return alertRepository.save(Alert.raise(command.tenantId(), command.assetId(), command.sourceEventId(),
-                command.severity(), clock.instant()));
+                command.severity(), command.diagnostic(), clock.instant()));
     }
 
     @Override

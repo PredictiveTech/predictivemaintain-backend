@@ -1,5 +1,6 @@
 package pe.edu.upc.predictivemaintain.maintenance.domain.model.aggregates;
 
+import pe.edu.upc.predictivemaintain.maintenance.domain.model.valueobjects.AlertDiagnostic;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.valueobjects.AlertSeverity;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.valueobjects.AlertStatus;
 import pe.edu.upc.predictivemaintain.shared.domain.exceptions.DomainConflictException;
@@ -26,9 +27,11 @@ public class Alert extends AbstractVersionedAggregateRoot {
     private AlertStatus status;
     private final Instant raisedAt;
     private String discardReason;
+    private final AlertDiagnostic diagnostic;
 
     private Alert(UUID id, UUID tenantId, UUID assetId, UUID sourceEventId, AlertSeverity severity,
-                  AlertStatus status, Instant raisedAt, String discardReason, long version) {
+                  AlertStatus status, Instant raisedAt, String discardReason, AlertDiagnostic diagnostic,
+                  long version) {
         super(version);
         this.id = Objects.requireNonNull(id);
         this.tenantId = Objects.requireNonNull(tenantId);
@@ -38,16 +41,21 @@ public class Alert extends AbstractVersionedAggregateRoot {
         this.status = Objects.requireNonNull(status);
         this.raisedAt = Objects.requireNonNull(raisedAt);
         this.discardReason = discardReason;
+        this.diagnostic = diagnostic;
     }
 
-    public static Alert raise(UUID tenantId, UUID assetId, UUID sourceEventId, AlertSeverity severity, Instant now) {
+    /** The diagnostic may be null for alerts that do not come from a sensor reading. */
+    public static Alert raise(UUID tenantId, UUID assetId, UUID sourceEventId, AlertSeverity severity,
+                              AlertDiagnostic diagnostic, Instant now) {
         return new Alert(UUID.randomUUID(), tenantId, assetId, sourceEventId, severity,
-                AlertStatus.IN_REVIEW, now, null, 0);
+                AlertStatus.IN_REVIEW, now, null, diagnostic, 0);
     }
 
     public static Alert restore(UUID id, UUID tenantId, UUID assetId, UUID sourceEventId, AlertSeverity severity,
-                                AlertStatus status, Instant raisedAt, String discardReason, long version) {
-        return new Alert(id, tenantId, assetId, sourceEventId, severity, status, raisedAt, discardReason, version);
+                                AlertStatus status, Instant raisedAt, String discardReason,
+                                AlertDiagnostic diagnostic, long version) {
+        return new Alert(id, tenantId, assetId, sourceEventId, severity, status, raisedAt, discardReason,
+                diagnostic, version);
     }
 
     /** The manager accepts the alert as real. It does not create the work order. */
@@ -118,5 +126,9 @@ public class Alert extends AbstractVersionedAggregateRoot {
 
     public String getDiscardReason() {
         return discardReason;
+    }
+
+    public AlertDiagnostic getDiagnostic() {
+        return diagnostic;
     }
 }
