@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -15,10 +16,15 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import pe.edu.upc.predictivemaintain.shared.application.errors.ApplicationException;
 import pe.edu.upc.predictivemaintain.shared.application.errors.CommonError;
 import pe.edu.upc.predictivemaintain.shared.application.errors.ErrorCode;
+import pe.edu.upc.predictivemaintain.shared.domain.exceptions.DomainConflictException;
 import pe.edu.upc.predictivemaintain.shared.domain.exceptions.DomainValidationException;
+
+import org.springframework.beans.TypeMismatchException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.net.URI;
 import java.util.LinkedHashMap;
@@ -52,6 +58,14 @@ public class GlobalExceptionHandler {
                 text(ex.getMessageKey(), ex.getArguments()), request.getRequestURI()));
     }
 
+    /** A rule of the domain forbids the action in the current state (invalid transition, stale version...). */
+    @ExceptionHandler(DomainConflictException.class)
+    public ResponseEntity<ProblemDetail> handleDomainConflict(DomainConflictException ex,
+                                                              HttpServletRequest request) {
+        return respond(problem(CommonError.CONFLICT,
+                text(ex.getMessageKey(), ex.getArguments()), request.getRequestURI()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException ex,
                                                           HttpServletRequest request) {
@@ -71,6 +85,17 @@ public class GlobalExceptionHandler {
                 text(CommonError.MALFORMED_REQUEST.messageKey()), request.getRequestURI()));
     }
 
+    /** A query or path value cannot be converted: ?status=NOPE for an enum, or /assets/abc for a UUID. */
+    @ExceptionHandler(TypeMismatchException.class)
+    public ResponseEntity<ProblemDetail> handleTypeMismatch(TypeMismatchException ex, HttpServletRequest request) {
+        ProblemDetail problem = problem(CommonError.VALIDATION_ERROR,
+                text(CommonError.VALIDATION_ERROR.messageKey()), request.getRequestURI());
+        if (ex instanceof MethodArgumentTypeMismatchException argument) {
+            problem.setProperty("errors", Map.of(argument.getName(), text("validation.parameter.invalid")));
+        }
+        return respond(problem);
+    }
+
     /** Thrown by @PreAuthorize when the authenticated user does not have the required role. */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ProblemDetail> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
@@ -85,6 +110,22 @@ public class GlobalExceptionHandler {
         log.warn("Data integrity violation on {}: {}", request.getRequestURI(), ex.getMostSpecificCause().getMessage());
         return respond(problem(CommonError.CONFLICT,
                 text(CommonError.CONFLICT.messageKey()), request.getRequestURI()));
+    }
+
+    /** Two people changed the same record at the same moment: the second one loses and must retry. */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ProblemDetail> handleOptimisticLock(OptimisticLockingFailureException ex,
+                                                              HttpServletRequest request) {
+        return respond(problem(CommonError.CONFLICT,
+                text(CommonError.CONFLICT.messageKey()), request.getRequestURI()));
+    }
+
+    /** Raised by Spring when an uploaded file exceeds spring.servlet.multipart.max-file-size. */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ProblemDetail> handleUploadTooLarge(MaxUploadSizeExceededException ex,
+                                                              HttpServletRequest request) {
+        return respond(problem(CommonError.PAYLOAD_TOO_LARGE,
+                text(CommonError.PAYLOAD_TOO_LARGE.messageKey()), request.getRequestURI()));
     }
 
     @ExceptionHandler(Exception.class)

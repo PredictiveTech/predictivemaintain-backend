@@ -12,6 +12,7 @@ public enum CommonError implements ErrorCode {
     FORBIDDEN(403, "error.forbidden"),
     RESOURCE_NOT_FOUND(404, "error.resource-not-found"),
     CONFLICT(409, "error.conflict"),
+    PAYLOAD_TOO_LARGE(413, "error.payload-too-large"),
     INTERNAL_ERROR(500, "error.internal");
 
     private final int status;
