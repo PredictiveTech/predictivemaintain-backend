@@ -10,6 +10,7 @@ import pe.edu.upc.predictivemaintain.maintenance.domain.model.commands.RegisterA
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.commands.UpdateAssetCommand;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.valueobjects.GeoLocation;
 import pe.edu.upc.predictivemaintain.maintenance.domain.repositories.AssetRepository;
+import pe.edu.upc.predictivemaintain.maintenance.domain.repositories.WorkOrderRepository;
 import pe.edu.upc.predictivemaintain.shared.application.errors.ApplicationException;
 import pe.edu.upc.predictivemaintain.subscription.interfaces.acl.SubscriptionContextFacade;
 
@@ -19,11 +20,14 @@ import java.util.UUID;
 public class AssetCommandServiceImpl implements AssetCommandService {
 
     private final AssetRepository assetRepository;
+    private final WorkOrderRepository workOrderRepository;
     private final SubscriptionContextFacade subscriptionContextFacade;
 
     public AssetCommandServiceImpl(AssetRepository assetRepository,
+                                   WorkOrderRepository workOrderRepository,
                                    SubscriptionContextFacade subscriptionContextFacade) {
         this.assetRepository = assetRepository;
+        this.workOrderRepository = workOrderRepository;
         this.subscriptionContextFacade = subscriptionContextFacade;
     }
 
@@ -64,6 +68,11 @@ public class AssetCommandServiceImpl implements AssetCommandService {
         Asset asset = findAsset(command.tenantId(), command.assetId());
         if (!asset.isActive()) {
             return asset; // already deactivated: repeating the request changes nothing
+        }
+        // US-13, scenario 2: warn about open orders before confirming the deactivation.
+        long openOrders = workOrderRepository.countOpenByAssetId(command.tenantId(), command.assetId());
+        if (openOrders > 0 && !command.force()) {
+            throw new ApplicationException(MaintenanceError.ASSET_HAS_OPEN_WORK_ORDERS, openOrders);
         }
         asset.deactivate();
         Asset saved = assetRepository.save(asset);
