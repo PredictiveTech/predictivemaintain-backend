@@ -105,10 +105,12 @@ public class AssetsController {
     @PreAuthorize("hasRole('MAINTENANCE_MANAGER')")
     @Operation(summary = "Deactivate an asset",
             description = "Logical deletion: the asset becomes inactive and its plan slot is released "
-                    + "(US-13, TS-05). Repeating the request returns 200 again.")
+                    + "(US-13, TS-05). If the asset has open work orders the answer is 409 as a warning; "
+                    + "repeat with force=true to confirm. Repeating the request returns 200 again.")
     public ResponseEntity<AssetResource> deactivate(@AuthenticationPrincipal AuthenticatedUser principal,
-                                                    @PathVariable UUID assetId) {
-        Asset asset = assetCommandService.handle(new DeactivateAssetCommand(principal.tenantId(), assetId));
+                                                    @PathVariable UUID assetId,
+                                                    @RequestParam(defaultValue = "false") boolean force) {
+        Asset asset = assetCommandService.handle(new DeactivateAssetCommand(principal.tenantId(), assetId, force));
         return ResponseEntity.ok(AssetResourceFromEntityAssembler.toResource(asset));
     }
 
