@@ -28,3 +28,5 @@ EXPOSE 8080
 # Use at most 75% of the memory the container has, and the lightest garbage collector (small instances).
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+
+ENV SPRING_PROFILES_ACTIVE=prod
