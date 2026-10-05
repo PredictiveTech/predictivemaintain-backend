@@ -1,0 +1,43 @@
+# Runs the whole system as it runs in production: the API image + PostgreSQL.
+#   docker compose up --build
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-predictivemaintain}
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in the .env file}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-predictivemaintain}
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in the .env file}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the .env file (32+ characters)}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
+      PASSWORD_RESET_LOG_LINKS: ${PASSWORD_RESET_LOG_LINKS:-false}
+      EVIDENCE_STORAGE_DIR: /data/evidence
+    ports:
+      - "8080:8080"
+    volumes:
+      - evidence:/data/evidence
+
+volumes:
+  pgdata:
+  evidence:
