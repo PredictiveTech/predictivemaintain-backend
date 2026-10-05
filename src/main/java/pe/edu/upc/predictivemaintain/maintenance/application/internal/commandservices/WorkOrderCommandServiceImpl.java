@@ -88,7 +88,7 @@ public class WorkOrderCommandServiceImpl implements WorkOrderCommandService {
         WorkOrder order = findOrder(command.tenantId(), command.workOrderId());
         requireAssignedTo(order, command.actorId());
         order.assertExpectedVersion(command.expectedVersion());
-        order.start(command.actorId(), clock.instant());
+        order.start(command.actorId(), command.performedAt() != null ? command.performedAt() : clock.instant());
         return workOrderRepository.save(order);
     }
 
@@ -98,7 +98,8 @@ public class WorkOrderCommandServiceImpl implements WorkOrderCommandService {
         WorkOrder order = findOrder(command.tenantId(), command.workOrderId());
         requireAssignedTo(order, command.actorId());
         order.assertExpectedVersion(command.expectedVersion());
-        order.complete(command.summary(), command.actorId(), clock.instant());
+        order.complete(command.summary(), command.actorId(),
+                command.performedAt() != null ? command.performedAt() : clock.instant());
         WorkOrder saved = workOrderRepository.save(order);
 
         // Closing the order and resolving its alert happen in the same transaction: both or none.
