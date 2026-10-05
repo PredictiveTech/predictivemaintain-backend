@@ -2,7 +2,7 @@
 
 API REST de **PredictiveMaintain**, una plataforma de auditoría y mantenimiento predictivo para plantas industriales con sensores IoT. Proyecto del curso **1ACC0238 Aplicaciones para Dispositivos Móviles** (UPC), equipo **PredictiveTech**.
 
-- **API en producción:** `https://TU-URL.up.railway.app`
+- **API en producción:** `https://predictivemaintain-backend-production.up.railway.app`
 - **Documentación (Swagger):** `https://TU-URL.up.railway.app/swagger-ui.html`
 
 ## Qué hace
@@ -85,4 +85,11 @@ Se despliega desde la rama `main` en Railway, con su base PostgreSQL y un volume
 
 ## Equipo
 
-PredictiveTech — NRC 4948. *(Completar con los integrantes.)*
+PredictiveTech — NRC 4948.
+
+|     Código     | Apellidos y Nombres            |
+|:--------------:|:-------------------------------|
+| **u202317450** | Choy Robles, Vanessa May Lang  |
+|   **u20231a816**   | Valverde Portuguez,Natalia Ximena                  |
+|   **U202412951**   | Seminario Castillo,Diego Vicente                 |
+| **u201916755** | Aiquipa Poma, Sebastian Andres |
