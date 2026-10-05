@@ -20,17 +20,21 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pe.edu.upc.predictivemaintain.iam.interfaces.acl.AuthenticatedUser;
 import pe.edu.upc.predictivemaintain.maintenance.application.commandservices.AssetCommandService;
+import pe.edu.upc.predictivemaintain.maintenance.application.queryservices.AssetOverviewQueryService;
 import pe.edu.upc.predictivemaintain.maintenance.application.queryservices.AssetQueryService;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.aggregates.Asset;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.commands.DeactivateAssetCommand;
-import pe.edu.upc.predictivemaintain.maintenance.domain.model.queries.GetAllAssetsQuery;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.queries.GetAssetByIdQuery;
+import pe.edu.upc.predictivemaintain.maintenance.domain.model.queries.GetAssetOverviewsQuery;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.queries.GetAssetWeatherQuery;
+import pe.edu.upc.predictivemaintain.maintenance.domain.model.valueobjects.AssetStatus;
+import pe.edu.upc.predictivemaintain.maintenance.interfaces.rest.resources.AssetOverviewResource;
 import pe.edu.upc.predictivemaintain.maintenance.interfaces.rest.resources.AssetResource;
 import pe.edu.upc.predictivemaintain.maintenance.interfaces.rest.resources.CreateAssetResource;
 import pe.edu.upc.predictivemaintain.maintenance.interfaces.rest.resources.UpdateAssetResource;
 import pe.edu.upc.predictivemaintain.maintenance.interfaces.rest.resources.WeatherResource;
 import pe.edu.upc.predictivemaintain.maintenance.interfaces.rest.transform.AssetCommandFromResourceAssembler;
+import pe.edu.upc.predictivemaintain.maintenance.interfaces.rest.transform.AssetOverviewResourceAssembler;
 import pe.edu.upc.predictivemaintain.maintenance.interfaces.rest.transform.AssetResourceFromEntityAssembler;
 import pe.edu.upc.predictivemaintain.maintenance.interfaces.rest.transform.WeatherResourceFromResultAssembler;
 import pe.edu.upc.predictivemaintain.shared.domain.model.valueobjects.PageQuery;
@@ -46,10 +50,13 @@ public class AssetsController {
 
     private final AssetCommandService assetCommandService;
     private final AssetQueryService assetQueryService;
+    private final AssetOverviewQueryService assetOverviewQueryService;
 
-    public AssetsController(AssetCommandService assetCommandService, AssetQueryService assetQueryService) {
+    public AssetsController(AssetCommandService assetCommandService, AssetQueryService assetQueryService,
+                            AssetOverviewQueryService assetOverviewQueryService) {
         this.assetCommandService = assetCommandService;
         this.assetQueryService = assetQueryService;
+        this.assetOverviewQueryService = assetOverviewQueryService;
     }
 
     @PostMapping
@@ -65,19 +72,24 @@ public class AssetsController {
     }
 
     @GetMapping
-    @Operation(summary = "List assets",
-            description = "Paginated list of the company's assets (US-02). Inactive assets are hidden "
-                    + "unless includeInactive=true. Open to every role.")
-    public ResponseEntity<PagedResource<AssetResource>> list(
+    @Operation(summary = "List assets with their status",
+            description = "Paginated list of the company's assets with a computed status: OPERATIONAL, IN_ALERT "
+                    + "(open alerts), NO_COMMUNICATION (no sensor transmitting) or INACTIVE (US-02). Filter by "
+                    + "status, production line, asset type or sensorType (a physical variable such as "
+                    + "TEMPERATURE). Inactive assets are hidden unless includeInactive=true. Open to every role.")
+    public ResponseEntity<PagedResource<AssetOverviewResource>> list(
             @AuthenticationPrincipal AuthenticatedUser principal,
+            @RequestParam(required = false) AssetStatus status,
+            @RequestParam(required = false) String sensorType,
             @RequestParam(required = false) String productionLine,
             @RequestParam(required = false) String assetType,
             @RequestParam(defaultValue = "false") boolean includeInactive,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        var result = assetQueryService.handle(new GetAllAssetsQuery(
-                principal.tenantId(), productionLine, assetType, includeInactive, new PageQuery(page, size)));
-        return ResponseEntity.ok(PagedResource.from(result, AssetResourceFromEntityAssembler::toResource));
+        var result = assetOverviewQueryService.handle(new GetAssetOverviewsQuery(
+                principal.tenantId(), productionLine, assetType, status, sensorType, includeInactive,
+                new PageQuery(page, size)));
+        return ResponseEntity.ok(PagedResource.from(result, AssetOverviewResourceAssembler::toResource));
     }
 
     @GetMapping("/{assetId}")

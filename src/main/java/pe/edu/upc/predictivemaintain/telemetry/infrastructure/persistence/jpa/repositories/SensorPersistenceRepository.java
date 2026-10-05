@@ -6,10 +6,13 @@ import pe.edu.upc.predictivemaintain.telemetry.infrastructure.persistence.jpa.en
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
 
 public interface SensorPersistenceRepository extends JpaRepository<SensorPersistenceEntity, UUID> {
 
     Optional<SensorPersistenceEntity> findByIdAndTenantId(UUID id, UUID tenantId);
 
     List<SensorPersistenceEntity> findByTenantIdAndAssetIdOrderByMetricAscIdAsc(UUID tenantId, UUID assetId);
+
+    List<SensorPersistenceEntity> findByTenantIdAndAssetIdIn(UUID tenantId, Collection<UUID> assetIds);
 }

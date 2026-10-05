@@ -11,6 +11,7 @@ import pe.edu.upc.predictivemaintain.telemetry.infrastructure.persistence.jpa.re
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
 
 @Repository
 public class SensorRepositoryImpl implements SensorRepository {
@@ -46,6 +47,16 @@ public class SensorRepositoryImpl implements SensorRepository {
     @Override
     public List<Sensor> findByAssetId(UUID tenantId, UUID assetId) {
         return jpaRepository.findByTenantIdAndAssetIdOrderByMetricAscIdAsc(tenantId, assetId).stream()
+                .map(SensorPersistenceAssembler::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Sensor> findByAssetIds(UUID tenantId, Collection<UUID> assetIds) {
+        if (assetIds.isEmpty()) {
+            return List.of();
+        }
+        return jpaRepository.findByTenantIdAndAssetIdIn(tenantId, assetIds).stream()
                 .map(SensorPersistenceAssembler::toDomain)
                 .toList();
     }
