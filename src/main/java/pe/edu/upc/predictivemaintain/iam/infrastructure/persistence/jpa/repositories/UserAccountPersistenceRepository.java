@@ -8,6 +8,7 @@ import pe.edu.upc.predictivemaintain.iam.infrastructure.persistence.jpa.entities
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 public interface UserAccountPersistenceRepository extends JpaRepository<UserAccountPersistenceEntity, UUID> {
 
@@ -20,4 +21,9 @@ public interface UserAccountPersistenceRepository extends JpaRepository<UserAcco
     @Query("select count(u) from UserAccountPersistenceEntity u join u.roles r "
             + "where u.tenantId = :tenantId and u.active = true and r = :role")
     long countActiveByTenantIdAndRole(@Param("tenantId") UUID tenantId, @Param("role") RoleName role);
+
+    @Query("select distinct u from UserAccountPersistenceEntity u join u.roles r "
+            + "where u.tenantId = :tenantId and u.active = true and r = :role")
+    List<UserAccountPersistenceEntity> findActiveByTenantIdAndRole(@Param("tenantId") UUID tenantId,
+                                                                   @Param("role") RoleName role);
 }

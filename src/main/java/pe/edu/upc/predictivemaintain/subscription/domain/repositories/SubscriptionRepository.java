@@ -4,6 +4,8 @@ import pe.edu.upc.predictivemaintain.subscription.domain.model.aggregates.Subscr
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
+import java.util.List;
 
 public interface SubscriptionRepository {
 
@@ -17,4 +19,7 @@ public interface SubscriptionRepository {
      * so two reservations for the same company are processed one at a time.
      */
     Optional<Subscription> findCurrentForUpdate(UUID tenantId);
+
+    /** ACTIVE subscriptions whose end falls after "from" and not after "to". */
+    List<Subscription> findActiveEndingBetween(Instant from, Instant to);
 }

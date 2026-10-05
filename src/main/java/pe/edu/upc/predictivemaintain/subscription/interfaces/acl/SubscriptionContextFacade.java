@@ -16,6 +16,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 /**
  * Anti-Corruption Layer: what the Subscription context exposes to other bounded contexts.
@@ -90,5 +91,17 @@ public class SubscriptionContextFacade {
         if (!isMonitoringAllowed(tenantId)) {
             throw new ApplicationException(SubscriptionError.SUBSCRIPTION_NOT_ACTIVE);
         }
+    }
+
+    /** A subscription that is about to end, used to warn its company (US-19). */
+    public record ExpiringSubscription(UUID tenantId, UUID subscriptionId, Instant endsAt) {
+    }
+
+    /** ACTIVE subscriptions that end after "from" and not after "to". */
+    public List<ExpiringSubscription> findExpiringBetween(Instant from, Instant to) {
+        return subscriptionRepository.findActiveEndingBetween(from, to).stream()
+                .map(subscription -> new ExpiringSubscription(
+                        subscription.getTenantId(), subscription.getId(), subscription.getEndsAt()))
+                .toList();
     }
 }

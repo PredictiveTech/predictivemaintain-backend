@@ -3,6 +3,7 @@ package pe.edu.upc.predictivemaintain.subscription.infrastructure.persistence.jp
 import org.springframework.stereotype.Repository;
 import pe.edu.upc.predictivemaintain.shared.domain.services.DomainEventPublisher;
 import pe.edu.upc.predictivemaintain.subscription.domain.model.aggregates.Subscription;
+import pe.edu.upc.predictivemaintain.subscription.domain.model.valueobjects.SubscriptionStatus;
 import pe.edu.upc.predictivemaintain.subscription.domain.repositories.SubscriptionRepository;
 import pe.edu.upc.predictivemaintain.subscription.infrastructure.persistence.jpa.assemblers.SubscriptionPersistenceAssembler;
 import pe.edu.upc.predictivemaintain.subscription.infrastructure.persistence.jpa.entities.SubscriptionPersistenceEntity;
@@ -10,6 +11,8 @@ import pe.edu.upc.predictivemaintain.subscription.infrastructure.persistence.jpa
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
+import java.util.List;
 
 @Repository
 public class SubscriptionRepositoryImpl implements SubscriptionRepository {
@@ -44,5 +47,13 @@ public class SubscriptionRepositoryImpl implements SubscriptionRepository {
         return jpaRepository.findAllByTenantIdForUpdate(tenantId).stream()
                 .findFirst()
                 .map(SubscriptionPersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public List<Subscription> findActiveEndingBetween(Instant from, Instant to) {
+        return jpaRepository.findByStatusAndEndsAtGreaterThanAndEndsAtLessThanEqual(
+                        SubscriptionStatus.ACTIVE, from, to).stream()
+                .map(SubscriptionPersistenceAssembler::toDomain)
+                .toList();
     }
 }

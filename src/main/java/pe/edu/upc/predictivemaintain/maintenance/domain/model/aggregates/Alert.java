@@ -6,6 +6,7 @@ import pe.edu.upc.predictivemaintain.maintenance.domain.model.valueobjects.Alert
 import pe.edu.upc.predictivemaintain.shared.domain.exceptions.DomainConflictException;
 import pe.edu.upc.predictivemaintain.shared.domain.exceptions.DomainValidationException;
 import pe.edu.upc.predictivemaintain.shared.domain.model.aggregates.AbstractVersionedAggregateRoot;
+import pe.edu.upc.predictivemaintain.maintenance.domain.model.events.AlertRaisedEvent;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -47,8 +48,14 @@ public class Alert extends AbstractVersionedAggregateRoot {
     /** The diagnostic may be null for alerts that do not come from a sensor reading. */
     public static Alert raise(UUID tenantId, UUID assetId, UUID sourceEventId, AlertSeverity severity,
                               AlertDiagnostic diagnostic, Instant now) {
-        return new Alert(UUID.randomUUID(), tenantId, assetId, sourceEventId, severity,
+        Alert alert = new Alert(UUID.randomUUID(), tenantId, assetId, sourceEventId, severity,
                 AlertStatus.IN_REVIEW, now, null, diagnostic, 0);
+        // The repository publishes the event when the alert is saved; the notifications context reacts to it.
+        alert.registerDomainEvent(new AlertRaisedEvent(alert.id, tenantId, assetId, severity.name(),
+                diagnostic == null ? null : diagnostic.metric(),
+                diagnostic == null ? null : diagnostic.unit(),
+                diagnostic == null ? null : diagnostic.observedValue()));
+        return alert;
     }
 
     public static Alert restore(UUID id, UUID tenantId, UUID assetId, UUID sourceEventId, AlertSeverity severity,

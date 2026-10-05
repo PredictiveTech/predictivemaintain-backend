@@ -10,6 +10,7 @@ import pe.edu.upc.predictivemaintain.maintenance.domain.repositories.AssetReposi
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -30,6 +31,10 @@ public class MaintenanceContextFacade {
                                 BigDecimal lowerBound, BigDecimal upperBound, Instant measuredAt) {
     }
 
+    /** What a message about an asset needs to say. */
+    public record AssetSummary(String code, String name, String assetType) {
+    }
+
     private final AssetRepository assetRepository;
     private final AlertCommandService alertCommandService;
 
@@ -42,6 +47,11 @@ public class MaintenanceContextFacade {
         return assetRepository.findByIdAndTenantId(assetId, tenantId)
                 .map(asset -> asset.isActive() ? AssetState.ACTIVE : AssetState.INACTIVE)
                 .orElse(AssetState.NOT_FOUND);
+    }
+
+    public Optional<AssetSummary> assetSummary(UUID tenantId, UUID assetId) {
+        return assetRepository.findByIdAndTenantId(assetId, tenantId)
+                .map(asset -> new AssetSummary(asset.getCode(), asset.getName(), asset.getAssetType()));
     }
 
     /**
