@@ -11,7 +11,7 @@ public enum SubscriptionError implements ErrorCode {
     PLAN_NOT_FOUND(404, "error.subscription.plan-not-found"),
     SUBSCRIPTION_NOT_FOUND(404, "error.subscription.not-found"),
     SUBSCRIPTION_NOT_ACTIVE(403, "error.subscription.not-active"),
-    CAPACITY_EXCEEDED(409, "error.subscription.capacity-exceeded");
+    CAPACITY_EXCEEDED(403, "error.subscription.capacity-exceeded");
 
     private final int status;
     private final String messageKey;
