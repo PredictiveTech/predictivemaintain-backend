@@ -12,6 +12,7 @@ import pe.edu.upc.predictivemaintain.shared.domain.services.DomainEventPublisher
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 @Repository
 public class UserAccountRepositoryImpl implements UserAccountRepository {
@@ -58,5 +59,12 @@ public class UserAccountRepositoryImpl implements UserAccountRepository {
     @Override
     public long countActiveByTenantIdAndRole(UUID tenantId, RoleName role) {
         return jpaRepository.countActiveByTenantIdAndRole(tenantId, role);
+    }
+
+    @Override
+    public List<UserAccount> findActiveByTenantIdAndRole(UUID tenantId, RoleName role) {
+        return jpaRepository.findActiveByTenantIdAndRole(tenantId, role).stream()
+                .map(UserAccountPersistenceAssembler::toDomain)
+                .toList();
     }
 }

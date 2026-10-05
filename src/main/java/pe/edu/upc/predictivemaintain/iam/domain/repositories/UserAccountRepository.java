@@ -6,6 +6,7 @@ import pe.edu.upc.predictivemaintain.iam.domain.model.valueobjects.RoleName;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 public interface UserAccountRepository {
 
@@ -21,4 +22,7 @@ public interface UserAccountRepository {
     boolean existsByEmail(EmailAddress email);
 
     long countActiveByTenantIdAndRole(UUID tenantId, RoleName role);
+
+    /** Active users of a company that have a role. */
+    List<UserAccount> findActiveByTenantIdAndRole(UUID tenantId, RoleName role);
 }
