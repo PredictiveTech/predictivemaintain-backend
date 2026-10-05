@@ -5,6 +5,7 @@ import pe.edu.upc.predictivemaintain.telemetry.domain.model.aggregates.Sensor;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
 
 public interface SensorRepository {
 
@@ -16,4 +17,7 @@ public interface SensorRepository {
     Optional<Sensor> findByIdAndTenantId(UUID id, UUID tenantId);
 
     List<Sensor> findByAssetId(UUID tenantId, UUID assetId);
+
+    /** Sensors of several assets at once, to describe a page of assets without one query per asset. */
+    List<Sensor> findByAssetIds(UUID tenantId, Collection<UUID> assetIds);
 }
