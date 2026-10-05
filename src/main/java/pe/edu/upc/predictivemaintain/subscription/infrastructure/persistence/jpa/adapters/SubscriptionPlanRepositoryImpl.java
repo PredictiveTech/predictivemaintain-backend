@@ -10,6 +10,7 @@ import pe.edu.upc.predictivemaintain.subscription.infrastructure.persistence.jpa
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Adapter that implements the domain port with Spring Data JPA.
@@ -51,5 +52,10 @@ public class SubscriptionPlanRepositoryImpl implements SubscriptionPlanRepositor
     @Override
     public boolean existsByName(String name) {
         return jpaRepository.existsByName(name);
+    }
+
+    @Override
+    public Optional<SubscriptionPlan> findById(UUID id) {
+        return jpaRepository.findById(id).map(SubscriptionPlanPersistenceAssembler::toDomain);
     }
 }

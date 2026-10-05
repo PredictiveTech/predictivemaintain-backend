@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upc.predictivemaintain.maintenance.interfaces.acl.MaintenanceContextFacade;
 import pe.edu.upc.predictivemaintain.shared.application.errors.ApplicationException;
+import pe.edu.upc.predictivemaintain.subscription.interfaces.acl.SubscriptionContextFacade; // NEW
 import pe.edu.upc.predictivemaintain.telemetry.application.commandservices.IngestReadingResult;
 import pe.edu.upc.predictivemaintain.telemetry.application.commandservices.ReadingCommandService;
 import pe.edu.upc.predictivemaintain.telemetry.application.errors.TelemetryError;
@@ -34,6 +35,7 @@ public class ReadingCommandServiceImpl implements ReadingCommandService {
     private final ThresholdRuleRepository thresholdRuleRepository;
     private final AnomalyDetectionRepository detectionRepository;
     private final MaintenanceContextFacade maintenanceContextFacade;
+    private final SubscriptionContextFacade subscriptionContextFacade; // NEW
     private final Clock clock;
     private final Duration minInterval;
     private final Duration alertCooldown;
@@ -43,6 +45,7 @@ public class ReadingCommandServiceImpl implements ReadingCommandService {
                                      ThresholdRuleRepository thresholdRuleRepository,
                                      AnomalyDetectionRepository detectionRepository,
                                      MaintenanceContextFacade maintenanceContextFacade,
+                                     SubscriptionContextFacade subscriptionContextFacade, // NEW
                                      Clock clock,
                                      @Value("${app.telemetry.min-interval-seconds:1}") long minIntervalSeconds,
                                      @Value("${app.telemetry.alert-cooldown-seconds:600}") long alertCooldownSeconds) {
@@ -51,6 +54,7 @@ public class ReadingCommandServiceImpl implements ReadingCommandService {
         this.thresholdRuleRepository = thresholdRuleRepository;
         this.detectionRepository = detectionRepository;
         this.maintenanceContextFacade = maintenanceContextFacade;
+        this.subscriptionContextFacade = subscriptionContextFacade; // NEW
         this.clock = clock;
         this.minInterval = Duration.ofSeconds(minIntervalSeconds);
         this.alertCooldown = Duration.ofSeconds(alertCooldownSeconds);
@@ -70,6 +74,9 @@ public class ReadingCommandServiceImpl implements ReadingCommandService {
                     .orElse(null);
             return new IngestReadingResult(existing.get(), false, previous);
         }
+
+        // US-19, scenario 2: without a valid subscription the platform stops accepting monitoring data.
+        subscriptionContextFacade.requireMonitoringAllowed(tenantId); // NEW
 
         if (!sensor.isActive()) {
             throw new ApplicationException(TelemetryError.SENSOR_INACTIVE);

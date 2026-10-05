@@ -9,6 +9,7 @@ public enum SubscriptionError implements ErrorCode {
 
     PLAN_ALREADY_EXISTS(409, "error.subscription.plan-already-exists"),
     PLAN_NOT_FOUND(404, "error.subscription.plan-not-found"),
+    SUBSCRIPTION_NOT_FOUND(404, "error.subscription.not-found"),
     SUBSCRIPTION_NOT_ACTIVE(403, "error.subscription.not-active"),
     CAPACITY_EXCEEDED(409, "error.subscription.capacity-exceeded");
 
