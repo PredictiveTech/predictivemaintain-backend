@@ -1,14 +1,19 @@
 package pe.edu.upc.predictivemaintain.subscription.interfaces.acl;
 
 import org.springframework.stereotype.Service;
+import pe.edu.upc.predictivemaintain.shared.application.errors.ApplicationException;
 import pe.edu.upc.predictivemaintain.subscription.application.commandservices.CapacityReservationCommandService;
 import pe.edu.upc.predictivemaintain.subscription.application.commandservices.CompanyCommandService;
+import pe.edu.upc.predictivemaintain.subscription.application.errors.SubscriptionError;
 import pe.edu.upc.predictivemaintain.subscription.domain.model.aggregates.Company;
 import pe.edu.upc.predictivemaintain.subscription.domain.model.commands.ProvisionCompanyCommand;
 import pe.edu.upc.predictivemaintain.subscription.domain.model.commands.ReleaseCapacityCommand;
 import pe.edu.upc.predictivemaintain.subscription.domain.model.commands.ReserveCapacityCommand;
 import pe.edu.upc.predictivemaintain.subscription.domain.repositories.CompanyRepository;
+import pe.edu.upc.predictivemaintain.subscription.domain.repositories.SubscriptionRepository;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,13 +27,19 @@ public class SubscriptionContextFacade {
     private final CompanyCommandService companyCommandService;
     private final CapacityReservationCommandService capacityCommandService;
     private final CompanyRepository companyRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final Clock clock;
 
     public SubscriptionContextFacade(CompanyCommandService companyCommandService,
                                      CapacityReservationCommandService capacityCommandService,
-                                     CompanyRepository companyRepository) {
+                                     CompanyRepository companyRepository,
+                                     SubscriptionRepository subscriptionRepository,
+                                     Clock clock) {
         this.companyCommandService = companyCommandService;
         this.capacityCommandService = capacityCommandService;
         this.companyRepository = companyRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.clock = clock;
     }
 
     /**
@@ -59,5 +70,25 @@ public class SubscriptionContextFacade {
      */
     public void releaseAssetCapacity(UUID tenantId, UUID reservationId) {
         capacityCommandService.handle(new ReleaseCapacityCommand(tenantId, reservationId));
+    }
+
+    /**
+     * True when the company has a subscription that is ACTIVE and inside its validity period (US-19).
+     */
+    public boolean isMonitoringAllowed(UUID tenantId) {
+        Instant now = clock.instant();
+        return subscriptionRepository.findCurrentByTenantId(tenantId)
+                .map(subscription -> subscription.isActive(now))
+                .orElse(false);
+    }
+
+    /**
+     * Same question, but failing with SUBSCRIPTION_NOT_ACTIVE (403) when the answer is no. The rule belongs to
+     * this context, so the error does too: callers do not need to know how it is decided.
+     */
+    public void requireMonitoringAllowed(UUID tenantId) {
+        if (!isMonitoringAllowed(tenantId)) {
+            throw new ApplicationException(SubscriptionError.SUBSCRIPTION_NOT_ACTIVE);
+        }
     }
 }
