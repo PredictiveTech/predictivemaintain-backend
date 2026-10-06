@@ -6,3 +6,8 @@ target/
 *.log
 HELP.md
 data/
+
+
+# Demo data holds passwords and sensor keys
+scripts/demo/demo-state*
+__pycache__/
