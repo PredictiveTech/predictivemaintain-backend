@@ -9,6 +9,15 @@ import pe.edu.upc.predictivemaintain.iam.infrastructure.persistence.jpa.assemble
 import pe.edu.upc.predictivemaintain.iam.infrastructure.persistence.jpa.entities.UserAccountPersistenceEntity;
 import pe.edu.upc.predictivemaintain.iam.infrastructure.persistence.jpa.repositories.UserAccountPersistenceRepository;
 import pe.edu.upc.predictivemaintain.shared.domain.services.DomainEventPublisher;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import pe.edu.upc.predictivemaintain.shared.domain.model.valueobjects.PageQuery;
+import pe.edu.upc.predictivemaintain.shared.domain.model.valueobjects.PagedResult;
+import java.util.ArrayList;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -66,5 +75,32 @@ public class UserAccountRepositoryImpl implements UserAccountRepository {
         return jpaRepository.findActiveByTenantIdAndRole(tenantId, role).stream()
                 .map(UserAccountPersistenceAssembler::toDomain)
                 .toList();
+    }
+
+    @Override
+    public PagedResult<UserAccount> search(UUID tenantId, RoleName role, Boolean active, PageQuery pageQuery) {
+        Specification<UserAccountPersistenceEntity> specification = (root, query, builder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(builder.equal(root.get("tenantId"), tenantId));
+            if (active != null) {
+                predicates.add(builder.equal(root.get("active"), active));
+            }
+            if (role != null) {
+                // The roles are a collection: join it, and make the result distinct so a user is not repeated
+                Join<UserAccountPersistenceEntity, RoleName> roles = root.join("roles");
+                predicates.add(builder.equal(roles, role));
+                query.distinct(true);
+            }
+            return builder.and(predicates.toArray(new Predicate[0]));
+        };
+
+        // The second sort key (id) keeps pages stable when two users have the same name
+        Page<UserAccountPersistenceEntity> page = jpaRepository.findAll(specification,
+                PageRequest.of(pageQuery.page(), pageQuery.size(), Sort.by("displayName", "id")));
+        return new PagedResult<>(
+                page.getContent().stream().map(UserAccountPersistenceAssembler::toDomain).toList(),
+                page.getTotalElements(),
+                pageQuery.page(),
+                pageQuery.size());
     }
 }

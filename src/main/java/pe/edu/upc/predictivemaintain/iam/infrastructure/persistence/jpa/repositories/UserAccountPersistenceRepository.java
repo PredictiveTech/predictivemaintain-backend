@@ -5,12 +5,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pe.edu.upc.predictivemaintain.iam.domain.model.valueobjects.RoleName;
 import pe.edu.upc.predictivemaintain.iam.infrastructure.persistence.jpa.entities.UserAccountPersistenceEntity;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Optional;
 import java.util.UUID;
 import java.util.List;
 
-public interface UserAccountPersistenceRepository extends JpaRepository<UserAccountPersistenceEntity, UUID> {
+
+/**
+ * JpaSpecificationExecutor lets the adapter build the list filters dynamically.
+ */
+public interface UserAccountPersistenceRepository
+        extends JpaRepository<UserAccountPersistenceEntity, UUID>, JpaSpecificationExecutor<UserAccountPersistenceEntity> {
 
     Optional<UserAccountPersistenceEntity> findByEmail(String email);
 
