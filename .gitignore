@@ -9,6 +9,5 @@ data/
 
 
 # Demo data holds passwords and sensor keys
-scripts/demo/demo-state.json
-scripts/demo/demo-state.json.tmp
+scripts/demo/demo-state*
 __pycache__/
