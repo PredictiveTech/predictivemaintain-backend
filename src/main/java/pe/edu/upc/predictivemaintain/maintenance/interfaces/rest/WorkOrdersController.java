@@ -22,7 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 import pe.edu.upc.predictivemaintain.iam.domain.model.valueobjects.RoleName;
 import pe.edu.upc.predictivemaintain.iam.interfaces.acl.AuthenticatedUser;
 import pe.edu.upc.predictivemaintain.maintenance.application.commandservices.WorkOrderCommandService;
+import pe.edu.upc.predictivemaintain.maintenance.application.queryservices.AlertLabel;
 import pe.edu.upc.predictivemaintain.maintenance.application.queryservices.EvidenceContent;
+import pe.edu.upc.predictivemaintain.maintenance.application.queryservices.LabelQueryService;
 import pe.edu.upc.predictivemaintain.maintenance.application.queryservices.WorkOrderQueryService;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.aggregates.EvidencePhoto;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.aggregates.WorkOrder;
@@ -32,6 +34,7 @@ import pe.edu.upc.predictivemaintain.maintenance.domain.model.commands.CancelWor
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.commands.CompleteWorkOrderCommand;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.commands.CreateWorkOrderCommand;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.commands.StartWorkOrderCommand;
+import pe.edu.upc.predictivemaintain.maintenance.domain.model.queries.GetAlertLabelsQuery;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.queries.GetAllWorkOrdersQuery;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.queries.GetEvidenceContentQuery;
 import pe.edu.upc.predictivemaintain.maintenance.domain.model.queries.GetWorkOrderByIdQuery;
@@ -54,6 +57,7 @@ import pe.edu.upc.predictivemaintain.shared.interfaces.rest.resources.PagedResou
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -64,10 +68,13 @@ public class WorkOrdersController {
 
     private final WorkOrderCommandService commandService;
     private final WorkOrderQueryService queryService;
+    private final LabelQueryService labelQueryService;
 
-    public WorkOrdersController(WorkOrderCommandService commandService, WorkOrderQueryService queryService) {
+    public WorkOrdersController(WorkOrderCommandService commandService, WorkOrderQueryService queryService,
+                                LabelQueryService labelQueryService) {
         this.commandService = commandService;
         this.queryService = queryService;
+        this.labelQueryService = labelQueryService;
     }
 
     @PostMapping
@@ -80,7 +87,7 @@ public class WorkOrdersController {
         WorkOrder order = commandService.handle(
                 new CreateWorkOrderCommand(principal.tenantId(), principal.userId(), resource.alertId()));
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(WorkOrderResourceFromEntityAssembler.toResource(order));
+                .body(resourceOf(principal, order));
     }
 
     @GetMapping
@@ -95,7 +102,11 @@ public class WorkOrdersController {
             @RequestParam(defaultValue = "20") int size) {
         var result = queryService.handle(new GetAllWorkOrdersQuery(
                 principal.tenantId(), restrictionFor(principal), status, new PageQuery(page, size)));
-        return ResponseEntity.ok(PagedResource.from(result, WorkOrderResourceFromEntityAssembler::toResource));
+        // One query for the labels of the whole page, instead of one per order
+        Map<UUID, AlertLabel> labels = labelQueryService.handle(new GetAlertLabelsQuery(principal.tenantId(),
+                result.items().stream().map(WorkOrder::getAlertId).toList()));
+        return ResponseEntity.ok(PagedResource.from(result,
+                order -> WorkOrderResourceFromEntityAssembler.toResource(order, labels.get(order.getAlertId()))));
     }
 
     @GetMapping("/{workOrderId}")
@@ -105,7 +116,7 @@ public class WorkOrdersController {
                                                      @PathVariable UUID workOrderId) {
         WorkOrder order = queryService.handle(
                 new GetWorkOrderByIdQuery(principal.tenantId(), restrictionFor(principal), workOrderId));
-        return ResponseEntity.ok(WorkOrderResourceFromEntityAssembler.toResource(order));
+        return ResponseEntity.ok(resourceOf(principal, order));
     }
 
     @GetMapping("/{workOrderId}/history")
@@ -129,7 +140,7 @@ public class WorkOrdersController {
                                                     @Valid @RequestBody AssignWorkOrderResource resource) {
         WorkOrder order = commandService.handle(new AssignWorkOrderCommand(principal.tenantId(),
                 principal.userId(), workOrderId, resource.technicianId(), resource.expectedVersion()));
-        return ResponseEntity.ok(WorkOrderResourceFromEntityAssembler.toResource(order));
+        return ResponseEntity.ok(resourceOf(principal, order));
     }
 
     @PostMapping("/{workOrderId}/start")
@@ -142,7 +153,7 @@ public class WorkOrdersController {
         Long expectedVersion = resource == null ? null : resource.expectedVersion();
         WorkOrder order = commandService.handle(new StartWorkOrderCommand(
                 principal.tenantId(), principal.userId(), workOrderId, expectedVersion));
-        return ResponseEntity.ok(WorkOrderResourceFromEntityAssembler.toResource(order));
+        return ResponseEntity.ok(resourceOf(principal, order));
     }
 
     @PatchMapping("/{workOrderId}/status")
@@ -170,7 +181,7 @@ public class WorkOrdersController {
             }
             default -> throw new DomainValidationException("validation.work-order.status-not-allowed");
         };
-        return ResponseEntity.ok(WorkOrderResourceFromEntityAssembler.toResource(order));
+        return ResponseEntity.ok(resourceOf(principal, order));
     }
 
     @PostMapping(value = "/{workOrderId}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -213,6 +224,14 @@ public class WorkOrdersController {
     }
 
     /** Managers see everything; any other user (a technician) only sees what is assigned to him. */
+    /** The response of every single-order endpoint, with the label of the order's asset and alert severity. */
+    private WorkOrderResource resourceOf(AuthenticatedUser principal, WorkOrder order) {
+        AlertLabel label = labelQueryService
+                .handle(new GetAlertLabelsQuery(principal.tenantId(), List.of(order.getAlertId())))
+                .get(order.getAlertId());
+        return WorkOrderResourceFromEntityAssembler.toResource(order, label);
+    }
+
     private static UUID restrictionFor(AuthenticatedUser principal) {
         return principal.roles().contains(RoleName.MAINTENANCE_MANAGER) ? null : principal.userId();
     }

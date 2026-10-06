@@ -6,6 +6,8 @@ import pe.edu.upc.predictivemaintain.maintenance.infrastructure.persistence.jpa.
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
+import java.util.List;
 
 public interface AlertPersistenceRepository
         extends JpaRepository<AlertPersistenceEntity, UUID>, JpaSpecificationExecutor<AlertPersistenceEntity> {
@@ -13,4 +15,6 @@ public interface AlertPersistenceRepository
     Optional<AlertPersistenceEntity> findByIdAndTenantId(UUID id, UUID tenantId);
 
     Optional<AlertPersistenceEntity> findByTenantIdAndSourceEventId(UUID tenantId, UUID sourceEventId);
+
+    List<AlertPersistenceEntity> findByTenantIdAndIdIn(UUID tenantId, Collection<UUID> ids);
 }

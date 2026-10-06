@@ -3,6 +3,8 @@ package pe.edu.upc.predictivemaintain.iam.domain.repositories;
 import pe.edu.upc.predictivemaintain.iam.domain.model.aggregates.UserAccount;
 import pe.edu.upc.predictivemaintain.iam.domain.model.valueobjects.EmailAddress;
 import pe.edu.upc.predictivemaintain.iam.domain.model.valueobjects.RoleName;
+import pe.edu.upc.predictivemaintain.shared.domain.model.valueobjects.PageQuery;
+import pe.edu.upc.predictivemaintain.shared.domain.model.valueobjects.PagedResult;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -25,4 +27,12 @@ public interface UserAccountRepository {
 
     /** Active users of a company that have a role. */
     List<UserAccount> findActiveByTenantIdAndRole(UUID tenantId, RoleName role);
+
+    /**
+     * The users of one company, ordered by name. Both filters are optional.
+     *
+     * @param role   only users with this role; null for any
+     * @param active true for active users only, false for deactivated only; null for both
+     */
+    PagedResult<UserAccount> search(UUID tenantId, RoleName role, Boolean active, PageQuery page);
 }
