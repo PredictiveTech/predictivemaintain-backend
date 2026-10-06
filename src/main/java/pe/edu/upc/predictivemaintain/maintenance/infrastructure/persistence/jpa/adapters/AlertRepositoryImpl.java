@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
 
 @Repository
 public class AlertRepositoryImpl implements AlertRepository {
@@ -42,6 +43,13 @@ public class AlertRepositoryImpl implements AlertRepository {
         AlertPersistenceEntity saved = jpaRepository.saveAndFlush(entity);
         eventPublisher.publishAll(alert);
         return AlertPersistenceAssembler.toDomain(saved);
+    }
+
+    @Override
+    public List<Alert> findAllByIdsAndTenantId(Collection<UUID> ids, UUID tenantId) {
+        return jpaRepository.findByTenantIdAndIdIn(tenantId, ids).stream()
+                .map(AlertPersistenceAssembler::toDomain)
+                .toList();
     }
 
     @Override
