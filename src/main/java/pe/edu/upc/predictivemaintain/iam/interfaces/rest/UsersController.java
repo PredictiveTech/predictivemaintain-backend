@@ -29,6 +29,11 @@ import pe.edu.upc.predictivemaintain.iam.interfaces.rest.resources.UpdateProfile
 import pe.edu.upc.predictivemaintain.iam.interfaces.rest.resources.UserResource;
 import pe.edu.upc.predictivemaintain.iam.interfaces.rest.transform.IamCommandFromResourceAssembler;
 import pe.edu.upc.predictivemaintain.iam.interfaces.rest.transform.UserResourceFromEntityAssembler;
+import org.springframework.web.bind.annotation.RequestParam;
+import pe.edu.upc.predictivemaintain.iam.domain.model.queries.GetUsersQuery;
+import pe.edu.upc.predictivemaintain.iam.domain.model.valueobjects.RoleName;
+import pe.edu.upc.predictivemaintain.shared.domain.model.valueobjects.PageQuery;
+import pe.edu.upc.predictivemaintain.shared.interfaces.rest.resources.PagedResource;
 
 import java.util.UUID;
 
@@ -44,6 +49,22 @@ public class UsersController {
     public UsersController(UserAccountCommandService commandService, UserAccountQueryService queryService) {
         this.commandService = commandService;
         this.queryService = queryService;
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('MAINTENANCE_MANAGER')")
+    @Operation(summary = "List the users of my company",
+            description = "Only for maintenance managers. Paginated and ordered by name. Optional filters: "
+                    + "role (MAINTENANCE_MANAGER, TECHNICIAN or OPERATOR) and active (true or false). "
+                    + "To choose who to assign a work order to, use role=TECHNICIAN&active=true.")
+    public ResponseEntity<PagedResource<UserResource>> list(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @RequestParam(required = false) RoleName role,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        var result = queryService.handle(new GetUsersQuery(principal.tenantId(), role, active, new PageQuery(page, size)));
+        return ResponseEntity.ok(PagedResource.from(result, UserResourceFromEntityAssembler::toResource));
     }
 
     @GetMapping("/me")
