@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
 
 @Repository
 public class AssetRepositoryImpl implements AssetRepository {
@@ -44,6 +45,13 @@ public class AssetRepositoryImpl implements AssetRepository {
     @Override
     public Optional<Asset> findByIdAndTenantId(UUID id, UUID tenantId) {
         return jpaRepository.findByIdAndTenantId(id, tenantId).map(AssetPersistenceAssembler::toDomain);
+    }
+
+    @Override
+    public List<Asset> findAllByIdsAndTenantId(Collection<UUID> ids, UUID tenantId) {
+        return jpaRepository.findByTenantIdAndIdIn(tenantId, ids).stream()
+                .map(AssetPersistenceAssembler::toDomain)
+                .toList();
     }
 
     @Override
