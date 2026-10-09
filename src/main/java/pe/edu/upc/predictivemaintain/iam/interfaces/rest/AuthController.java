@@ -22,6 +22,8 @@ import pe.edu.upc.predictivemaintain.iam.interfaces.rest.resources.ResetPassword
 import pe.edu.upc.predictivemaintain.iam.interfaces.rest.transform.AuthTokenResourceFromResultAssembler;
 import pe.edu.upc.predictivemaintain.iam.interfaces.rest.transform.IamCommandFromResourceAssembler;
 
+
+
 @RestController
 @RequestMapping(value = "/api/v1/auth", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Authentication", description = "Company registration, login and password recovery (public endpoints)")
@@ -32,6 +34,16 @@ public class AuthController {
     public AuthController(AuthenticationCommandService authenticationCommandService) {
         this.authenticationCommandService = authenticationCommandService;
     }
+
+    /**
+     * Registers a new company and its first administrator account.
+     * The {@code registrationId} is a client-generated UUID that makes
+     * this operation idempotent: repeating the request with the same id
+     * returns the existing account instead of creating a duplicate.
+     *
+     * @param resource company name, administrator e-mail, password and client-generated UUID
+     * @return 201 Created with the new account details
+     */
 
     @PostMapping("/register")
     @Operation(summary = "Register a company account",
@@ -45,6 +57,15 @@ public class AuthController {
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK).body(body);
     }
 
+    /**
+     * Authenticates a user and returns a short-lived JWT access token (60 minutes).
+     * There is no refresh token: once the token expires the client must log in again.
+     * A 401 response means the credentials are wrong, not that the session expired.
+     *
+     * @param resource user e-mail and password
+     * @return 200 OK with accessToken, tokenType, expiresAt, userId, tenantId and roles
+     */
+
     @PostMapping("/login")
     @Operation(summary = "Log in",
             description = "Returns a signed JWT with the user's roles (US-21, TS-03). "
@@ -54,6 +75,15 @@ public class AuthController {
         return ResponseEntity.ok(AuthTokenResourceFromResultAssembler.toResource(result));
     }
 
+    /**
+     * Sends a password-reset link to the given e-mail address.
+     * Always returns 204 regardless of whether the e-mail belongs to an existing account,
+     * to prevent user enumeration attacks.
+     *
+     * @param resource e-mail address of the account to recover
+     * @return 204 No Content
+     */
+
     @PostMapping("/password-reset-requests")
     @Operation(summary = "Request a password recovery link",
             description = "Generates a single-use link valid for a limited time (US-22). "
@@ -62,6 +92,15 @@ public class AuthController {
         authenticationCommandService.handle(IamCommandFromResourceAssembler.toCommand(resource));
         return ResponseEntity.accepted().build();
     }
+
+    /**
+     * Resets the password using the token delivered by the reset e-mail.
+     * The token is single-use and expires after a short period.
+     *
+     * @param resource one-time token and the new password
+     * @return 204 No Content
+     */
+
 
     @PostMapping("/password-reset")
     @Operation(summary = "Set a new password with a recovery token",
