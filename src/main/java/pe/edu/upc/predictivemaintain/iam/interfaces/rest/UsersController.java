@@ -51,6 +51,20 @@ public class UsersController {
         this.queryService = queryService;
     }
 
+    /**
+     * Returns a paginated list of users belonging to the authenticated tenant.
+     * Only accessible to users with the MAINTENANCE_MANAGER role.
+     * Results are ordered by display name; a secondary sort by id ensures stable pagination.
+     * The join on the roles collection uses {@code query.distinct(true)} to prevent
+     * duplicate rows for users that hold more than one role.
+     *
+     * @param role   optional role filter (MAINTENANCE_MANAGER, TECHNICIAN or OPERATOR)
+     * @param active optional filter to include only active or inactive accounts
+     * @param page   zero-based page index (default 0)
+     * @param size   page size between 1 and 100 (default 20)
+     * @return 200 OK with a page of user summaries
+     */
+
     @GetMapping
     @PreAuthorize("hasRole('MAINTENANCE_MANAGER')")
     @Operation(summary = "List the users of my company",
@@ -67,12 +81,28 @@ public class UsersController {
         return ResponseEntity.ok(PagedResource.from(result, UserResourceFromEntityAssembler::toResource));
     }
 
+    /**
+     * Returns the profile of the currently authenticated user.
+     * Used by the mobile app on startup to validate a stored session token
+     * and to refresh the display name and roles after a change.
+     *
+     * @param principal injected by Spring Security from the JWT token
+     * @return 200 OK with id, tenantId, email, displayName, active and roles
+     */
+
     @GetMapping("/me")
     @Operation(summary = "Get my profile")
     public ResponseEntity<UserResource> getMe(@AuthenticationPrincipal AuthenticatedUser principal) {
         UserAccount user = queryService.handle(new GetUserAccountByIdQuery(principal.userId()));
         return ResponseEntity.ok(UserResourceFromEntityAssembler.toResource(user));
     }
+
+    /**
+     * Updates the display name of the currently authenticated user.
+     *
+     * @param resource new display name
+     * @return 200 OK with the updated profile
+     */
 
     @PatchMapping("/me")
     @Operation(summary = "Update my profile", description = "Changes the display name (US-23).")
@@ -82,6 +112,15 @@ public class UsersController {
                 IamCommandFromResourceAssembler.toCommand(principal.userId(), resource));
         return ResponseEntity.ok(UserResourceFromEntityAssembler.toResource(user));
     }
+
+    /**
+     * Creates a new user account within the authenticated tenant.
+     * Only accessible to users with the MAINTENANCE_MANAGER role.
+     * The initial password must be changed by the new user on first login.
+     *
+     * @param resource e-mail, display name, initial password and roles
+     * @return 201 Created with the new user details
+     */
 
     @PostMapping
     @PreAuthorize("hasRole('MAINTENANCE_MANAGER')")
