@@ -33,6 +33,22 @@ public class SyncController {
         this.messages = messages;
     }
 
+    /**
+     * Applies a batch of work-order actions collected offline on a mobile device.
+     * The device sends its local clock timestamp ({@code deviceSentAt}) so the server
+     * can normalize all action timestamps. Clock skew exceeding 24 hours rejects
+     * the entire request with 400 Bad Request.
+     * Each operation in an accepted batch receives an independent outcome:
+     * APPLIED, ALREADY_APPLIED (idempotent replay), SUPERSEDED (the server state wins)
+     * or REJECTED (the operation cannot be accepted).
+     * The batch is limited to 100 operations; new actions older than 14 days are rejected.
+     * The batch is not wrapped in a single transaction, so a rejected operation
+     * does not roll back the other actions.
+     *
+     * @param principal authenticated user providing the tenant and technician context
+     * @param resource deviceSentAt timestamp and list of work-order operations
+     * @return 200 OK with one outcome per operation, ordered by normalized action time
+     */
     @PostMapping("/work-orders")
     @PreAuthorize("hasRole('TECHNICIAN')")
     @Operation(summary = "Synchronize work order actions done offline",

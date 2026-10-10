@@ -59,6 +59,15 @@ public class AssetsController {
         this.assetOverviewQueryService = assetOverviewQueryService;
     }
 
+    /**
+     * Registers a new industrial asset (motor, pump, compressor, etc.)
+     * within the authenticated tenant and reserves capacity against the active subscription plan.
+     * Returns 403 CAPACITY_EXCEEDED when the plan limit has been reached.
+     *
+     * @param principal authenticated user providing the tenant context
+     * @param resource asset code, name, type, criticality, location and optional location coordinates
+     * @return 201 Created with the new asset details
+     */
     @PostMapping
     @PreAuthorize("hasRole('MAINTENANCE_MANAGER')")
     @Operation(summary = "Register an asset",
@@ -71,6 +80,22 @@ public class AssetsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(AssetResourceFromEntityAssembler.toResource(asset));
     }
 
+    /**
+     * Returns a paginated list of assets belonging to the authenticated tenant.
+     * Each item includes a computed {@code status} field:
+     * OPERATIONAL, IN_ALERT, NO_COMMUNICATION or INACTIVE.
+     * Accessible to all authenticated roles.
+     *
+     * @param principal       authenticated user providing the tenant context
+     * @param status          optional status filter
+     * @param sensorType      optional sensor type filter (e.g. VIBRATION, TEMPERATURE)
+     * @param productionLine  optional production line filter
+     * @param assetType       optional asset type filter
+     * @param includeInactive whether to include deactivated assets (default false)
+     * @param page            zero-based page index (default 0)
+     * @param size            page size (default 20)
+     * @return 200 OK with a page of asset overviews
+     */
     @GetMapping
     @Operation(summary = "List assets with their status",
             description = "Paginated list of the company's assets with a computed status: OPERATIONAL, IN_ALERT "
@@ -92,6 +117,15 @@ public class AssetsController {
         return ResponseEntity.ok(PagedResource.from(result, AssetOverviewResourceAssembler::toResource));
     }
 
+    /**
+     * Returns the full details of a single asset, including its location coordinates
+     * and production line. Does not include the computed status; call the list endpoint
+     * or the sensor panel endpoint for real-time health information.
+     *
+     * @param principal authenticated user providing the tenant context
+     * @param assetId UUID of the asset
+     * @return 200 OK with the asset details, 404 if not found or not owned by the tenant
+     */
     @GetMapping("/{assetId}")
     @Operation(summary = "Get an asset", description = "Open to every role.")
     public ResponseEntity<AssetResource> getById(@AuthenticationPrincipal AuthenticatedUser principal,
@@ -100,6 +134,16 @@ public class AssetsController {
         return ResponseEntity.ok(AssetResourceFromEntityAssembler.toResource(asset));
     }
 
+    /**
+     * Replaces the mutable fields of an existing active asset (name, location, plant,
+     * production line, type, criticality and location coordinates).
+     * The asset code cannot be changed after creation.
+     *
+     * @param principal authenticated user providing the tenant context
+     * @param assetId  UUID of the asset to update
+     * @param resource updated asset fields
+     * @return 200 OK with the updated asset
+     */
     @PutMapping("/{assetId}")
     @PreAuthorize("hasRole('MAINTENANCE_MANAGER')")
     @Operation(summary = "Update an asset",
@@ -113,6 +157,16 @@ public class AssetsController {
         return ResponseEntity.ok(AssetResourceFromEntityAssembler.toResource(asset));
     }
 
+    /**
+     * Deactivates an asset and releases its capacity reservation.
+     * A soft delete: the asset and its historical data are preserved.
+     * Pass {@code force=true} to deactivate even when the asset has open work orders.
+     *
+     * @param principal authenticated user providing the tenant context
+     * @param assetId UUID of the asset to deactivate
+     * @param force   when true, deactivates even if open work orders exist (default false)
+     * @return 200 OK with the deactivated asset
+     */
     @DeleteMapping("/{assetId}")
     @PreAuthorize("hasRole('MAINTENANCE_MANAGER')")
     @Operation(summary = "Deactivate an asset",
