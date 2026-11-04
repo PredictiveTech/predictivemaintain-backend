@@ -18,6 +18,9 @@ public interface SensorReadingPersistenceRepository extends JpaRepository<Sensor
     Optional<SensorReadingPersistenceEntity> findFirstByTenantIdAndSensorIdOrderByMeasuredAtDesc(
             UUID tenantId, UUID sensorId);
 
+    java.util.List<SensorReadingPersistenceEntity> findByTenantIdAndSensorIdOrderByMeasuredAtDesc(
+            UUID tenantId, UUID sensorId, Pageable pageable);
+
     Page<SensorReadingPersistenceEntity> findByTenantIdAndSensorIdInAndMeasuredAtBetween(
             UUID tenantId, Collection<UUID> sensorIds, Instant from, Instant to, Pageable pageable);
 }

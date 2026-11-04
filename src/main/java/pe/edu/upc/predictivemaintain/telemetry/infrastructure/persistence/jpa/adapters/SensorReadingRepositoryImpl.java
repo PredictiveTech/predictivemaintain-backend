@@ -45,6 +45,12 @@ public class SensorReadingRepositoryImpl implements SensorReadingRepository {
     }
 
     @Override
+    public java.util.List<SensorReading> findRecentBySensorId(UUID tenantId, UUID sensorId, int limit) {
+        return jpaRepository.findByTenantIdAndSensorIdOrderByMeasuredAtDesc(tenantId, sensorId, PageRequest.of(0, limit))
+                .stream().map(SensorReadingPersistenceAssembler::toDomain).toList();
+    }
+
+    @Override
     public PagedResult<SensorReading> search(UUID tenantId, Collection<UUID> sensorIds, Instant from, Instant to,
                                              PageQuery pageQuery) {
         if (sensorIds.isEmpty()) {

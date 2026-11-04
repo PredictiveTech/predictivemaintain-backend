@@ -22,6 +22,7 @@
         <springdoc.version>2.8.5</springdoc.version>
         <jjwt.version>0.12.6</jjwt.version>
         <paho.version>1.2.5</paho.version>
+        <commons-math.version>3.6.1</commons-math.version>
     </properties>
 
     <dependencies>
@@ -68,6 +69,13 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- SP-02 spike: statistics (z-score over a sliding window). Apache 2.0, no transitive dependencies -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>${commons-math.version}</version>
         </dependency>
 
         <!-- SP-01 spike: MQTT client (works with any broker: Mosquitto, EMQX, HiveMQ) -->

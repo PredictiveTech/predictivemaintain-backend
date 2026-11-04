@@ -18,6 +18,9 @@ public interface SensorReadingRepository {
     /** The reading with the most recent measurement time. */
     Optional<SensorReading> findLatestBySensorId(UUID tenantId, UUID sensorId);
 
+    /** The last {@code limit} readings by measurement time, newest first. */
+    java.util.List<SensorReading> findRecentBySensorId(UUID tenantId, UUID sensorId, int limit);
+
     /** Readings of several sensors between two instants (inclusive), newest first. */
     PagedResult<SensorReading> search(UUID tenantId, Collection<UUID> sensorIds, Instant from, Instant to,
                                       PageQuery page);
