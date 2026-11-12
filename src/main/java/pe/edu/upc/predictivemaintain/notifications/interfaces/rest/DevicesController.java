@@ -25,7 +25,9 @@ import pe.edu.upc.predictivemaintain.notifications.interfaces.rest.transform.Not
 import java.util.UUID;
 
 @RestController
-@RequestMapping(value = "/api/v1/devices", produces = MediaType.APPLICATION_JSON_VALUE)
+// "/api/v1/notifications/device-tokens" is the path the Android app calls; "/api/v1/devices" is kept for compatibility.
+@RequestMapping(value = {"/api/v1/devices", "/api/v1/notifications/device-tokens"},
+        produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Devices", description = "Registers the phone to receive push notifications")
 @SecurityRequirement(name = "bearerAuth")
 public class DevicesController {
