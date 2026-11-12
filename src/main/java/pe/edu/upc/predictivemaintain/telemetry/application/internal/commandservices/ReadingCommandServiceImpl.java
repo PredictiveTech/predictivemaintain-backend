@@ -20,15 +20,22 @@ import pe.edu.upc.predictivemaintain.telemetry.domain.repositories.AnomalyDetect
 import pe.edu.upc.predictivemaintain.telemetry.domain.repositories.SensorReadingRepository;
 import pe.edu.upc.predictivemaintain.telemetry.domain.repositories.SensorRepository;
 import pe.edu.upc.predictivemaintain.telemetry.domain.repositories.ThresholdRuleRepository;
+import pe.edu.upc.predictivemaintain.telemetry.domain.services.StatisticalAnomalyDetector;
+import pe.edu.upc.predictivemaintain.telemetry.domain.services.StatisticalVerdict;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class ReadingCommandServiceImpl implements ReadingCommandService {
+
+    private static final Logger log = LoggerFactory.getLogger(ReadingCommandServiceImpl.class);
 
     private final SensorRepository sensorRepository;
     private final SensorReadingRepository readingRepository;
@@ -36,6 +43,7 @@ public class ReadingCommandServiceImpl implements ReadingCommandService {
     private final AnomalyDetectionRepository detectionRepository;
     private final MaintenanceContextFacade maintenanceContextFacade;
     private final SubscriptionContextFacade subscriptionContextFacade; // NEW
+    private final StatisticalAnomalyDetector statisticalDetector; // SP-02
     private final Clock clock;
     private final Duration minInterval;
     private final Duration alertCooldown;
@@ -46,6 +54,7 @@ public class ReadingCommandServiceImpl implements ReadingCommandService {
                                      AnomalyDetectionRepository detectionRepository,
                                      MaintenanceContextFacade maintenanceContextFacade,
                                      SubscriptionContextFacade subscriptionContextFacade, // NEW
+                                     StatisticalAnomalyDetector statisticalDetector, // SP-02
                                      Clock clock,
                                      @Value("${app.telemetry.min-interval-seconds:1}") long minIntervalSeconds,
                                      @Value("${app.telemetry.alert-cooldown-seconds:600}") long alertCooldownSeconds) {
@@ -55,6 +64,7 @@ public class ReadingCommandServiceImpl implements ReadingCommandService {
         this.detectionRepository = detectionRepository;
         this.maintenanceContextFacade = maintenanceContextFacade;
         this.subscriptionContextFacade = subscriptionContextFacade; // NEW
+        this.statisticalDetector = statisticalDetector;
         this.clock = clock;
         this.minInterval = Duration.ofSeconds(minIntervalSeconds);
         this.alertCooldown = Duration.ofSeconds(alertCooldownSeconds);
@@ -96,14 +106,38 @@ public class ReadingCommandServiceImpl implements ReadingCommandService {
             throw new ApplicationException(TelemetryError.READING_TOO_FREQUENT);
         }
 
+        // SP-02: the history must be read BEFORE saving, so the current reading does not compare with itself.
+        List<SensorReading> history = statisticalDetector.enabled()
+                ? readingRepository.findRecentBySensorId(tenantId, sensor.getId(), statisticalDetector.windowSize())
+                : List.of();
+
         Measurement measurement = new Measurement(command.value(), command.unit());
         SensorReading reading = readingRepository.save(
                 SensorReading.create(sensor, command.sourceKey(), measurement, command.measuredAt(), now));
         sensor.recordReception(now);
 
         AnomalyDetection detection = evaluate(sensor, reading, now);
+        checkStatistically(sensor, reading, history);
         sensorRepository.save(sensor);
         return new IngestReadingResult(reading, true, detection);
+    }
+
+    /**
+     * SP-02, shadow mode: looks for a statistical outlier and only writes it to the log. It does not create
+     * detections or alerts yet, because AnomalyDetection requires a threshold rule (see the spike document).
+     */
+    private void checkStatistically(Sensor sensor, SensorReading reading, List<SensorReading> history) {
+        if (!statisticalDetector.enabled()) {
+            return;
+        }
+        double[] values = history.stream().mapToDouble(r -> r.getValue().doubleValue()).toArray();
+        StatisticalVerdict verdict = statisticalDetector.analyze(values, reading.getValue().doubleValue());
+        if (verdict.anomalous()) {
+            log.warn("SP-02 statistical anomaly: sensor={} value={} mean={} stdDev={} z={} (window={})",
+                    sensor.getId(), reading.getValue(), String.format("%.3f", verdict.mean()),
+                    String.format("%.3f", verdict.standardDeviation()), String.format("%.2f", verdict.zScore()),
+                    verdict.samples());
+        }
     }
 
     /** Compares the reading with the sensor's rule; if it is outside, records the detection and may raise an alert. */

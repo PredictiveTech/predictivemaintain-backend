@@ -1,0 +1,10 @@
+# SP-01 spike: local Mosquitto broker, anonymous, no TLS. Local testing only.
+#   docker compose -f scripts/mqtt/docker-compose.mosquitto.yml up
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "127.0.0.1:1883:1883"
+    command: >
+      sh -c "printf 'listener 1883\nallow_anonymous true\n' > /mosquitto/config/mosquitto.conf
+      && mosquitto -c /mosquitto/config/mosquitto.conf"
